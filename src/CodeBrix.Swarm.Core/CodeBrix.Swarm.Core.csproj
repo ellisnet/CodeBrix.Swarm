@@ -1,0 +1,94 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    THE SHARED PROJECT, AND IT IS A PROJECT RATHER THAN A PACKAGE ON PURPOSE.
+
+    CodeBrix.Swarm.Queen, CodeBrix.Swarm.Hive and CodeBrix.Swarm.Worker must never depend on each
+    other, in any direction and at either level, so the contract all three speak cannot live in one
+    of them. It lives here instead, and ALL THREE reference this project and pack this assembly
+    INSIDE their own .nupkg beside their own (lib/net10.0/CodeBrix.Swarm.Core.dll). There is no
+    fourth NuGet package: a consumer installs the packages it already knows about and each of them
+    brings its own copy of this one. The arrows point only INTO this project - it references none of
+    the three libraries and never will.
+
+    UNLIKE the equivalent project in some other CodeBrix repositories, SOME of the types in here are
+    PUBLIC. The three roles exchange messages that SignalR serializes between processes, and the
+    consuming application defines the payloads and registers the handlers, so the envelope, the
+    handler-registration types, the role, the built-in message kinds, the hub contract, the Worker
+    configuration model and the exit codes are all part of the surface a consumer sees. Everything
+    else - the hub-client connection logic, the clock, the JSON helpers - is internal and named in
+    InternalsVisibleTo.cs.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CodeBrix.Swarm.Core</AssemblyName>
+    <RootNamespace>CodeBrix.Swarm.Core</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!--
+      Never packed on its own: this assembly reaches a consumer only inside the three library
+      packages. GeneratePackageOnBuild is spelled out beside IsPackable so that neither can be turned
+      on by accident while the other stays off.
+    -->
+    <IsPackable>false</IsPackable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <!--
+    Package / assembly version: date-stamped and auto-incrementing.
+
+    Format:  1.<x>.<y>.<z>   (every field is derived from UTC "now")
+
+      1  (major)     Always 1 for this library.
+      x  (minor)     Whole years since $(_VersionBaseYear).
+                     With base 2026: 2026=0, 2027=1, 2028=2, ...
+      y  (build)     Day of year, 1-based inclusive, UTC.
+                     Jan 1 = 1, Feb 1 = 32, Dec 31 = 365 (366 in a leap year).
+      z  (revision)  Minute of day, UTC, range 0 to 1439.
+                     00:00 = 0, 23:59 = 1439.
+
+    The version is always strictly increasing over time:
+      * within a day, z grows;
+      * at a day boundary, y increments and outranks z resetting to 0;
+      * at a (UTC) year boundary, x increments and outranks y and z resetting.
+
+    Notes / caveats:
+      * All fields read from System.DateTime.UtcNow, so a local dev build and a
+        UTC CI build agree on the value. Math.Floor on the minutes keeps z in
+        0..1439 (plain rounding could land on 1440 late in the day).
+      * Because the value depends on the clock, every build produces a NEW
+        version. With GeneratePackageOnBuild=true that means a fresh .nupkg on
+        each build, and two builds in the SAME UTC minute produce the SAME
+        version (so do not publish two packages from within one minute).
+      * This is date-stamp versioning, not SemVer: minor encodes the year and
+        major is pinned to 1, so major/minor do not signal API compatibility.
+      * To re-baseline the minor number, change _VersionBaseYear below.
+  -->
+  <PropertyGroup>
+    <_VersionBaseYear>2026</_VersionBaseYear>
+    <_VersionYears>$([MSBuild]::Subtract($([System.DateTime]::UtcNow.Year), $(_VersionBaseYear)))</_VersionYears>
+    <_VersionDayOfYear>$([System.DateTime]::UtcNow.DayOfYear)</_VersionDayOfYear>
+    <_VersionMinuteOfDay>$([System.Convert]::ToInt32($([System.Math]::Floor($([System.DateTime]::UtcNow.TimeOfDay.TotalMinutes)))))</_VersionMinuteOfDay>
+    <BuildVersion>1.$(_VersionYears).$(_VersionDayOfYear).$(_VersionMinuteOfDay)</BuildVersion>
+    <Version>$(BuildVersion)</Version>
+    <AssemblyVersion>$(BuildVersion)</AssemblyVersion>
+    <FileVersion>$(BuildVersion)</FileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Product>CodeBrix.Swarm.Core</Product>
+    <Authors>Jeremy Ellis</Authors>
+    <Copyright>Copyright (c) 2026 Jeremy Ellis and contributors</Copyright>
+  </PropertyGroup>
+
+  <!--
+    THE ONE PACKAGE REFERENCE. The hub-client connection logic that a Hive and a Worker both need is
+    written once, here, so it needs the SignalR client. Because the three libraries reference this
+    project with PrivateAssets="all", this reference does NOT flow into their generated .nuspec
+    files: each of them declares the same PackageReference itself.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>

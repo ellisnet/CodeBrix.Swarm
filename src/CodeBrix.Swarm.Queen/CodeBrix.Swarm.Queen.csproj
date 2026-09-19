@@ -1,0 +1,142 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CodeBrix.Swarm.Queen</AssemblyName>
+    <RootNamespace>CodeBrix.Swarm.Queen</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!--
+    Package / assembly version: date-stamped and auto-incrementing.
+
+    Format:  1.<x>.<y>.<z>   (every field is derived from UTC "now")
+
+      1  (major)     Always 1 for this library.
+      x  (minor)     Whole years since $(_VersionBaseYear).
+                     With base 2026: 2026=0, 2027=1, 2028=2, ...
+      y  (build)     Day of year, 1-based inclusive, UTC.
+                     Jan 1 = 1, Feb 1 = 32, Dec 31 = 365 (366 in a leap year).
+      z  (revision)  Minute of day, UTC, range 0 to 1439.
+                     00:00 = 0, 23:59 = 1439.
+
+    The version is always strictly increasing over time:
+      * within a day, z grows;
+      * at a day boundary, y increments and outranks z resetting to 0;
+      * at a (UTC) year boundary, x increments and outranks y and z resetting.
+
+    Notes / caveats:
+      * All fields read from System.DateTime.UtcNow, so a local dev build and a
+        UTC CI build agree on the value. Math.Floor on the minutes keeps z in
+        0..1439 (plain rounding could land on 1440 late in the day).
+      * Because the value depends on the clock, every build produces a NEW
+        version. With GeneratePackageOnBuild=true that means a fresh .nupkg on
+        each build, and two builds in the SAME UTC minute produce the SAME
+        version (so do not publish two packages from within one minute).
+      * This is date-stamp versioning, not SemVer: minor encodes the year and
+        major is pinned to 1, so major/minor do not signal API compatibility.
+      * To re-baseline the minor number, change _VersionBaseYear below.
+  -->
+  <PropertyGroup>
+    <_VersionBaseYear>2026</_VersionBaseYear>
+    <_VersionYears>$([MSBuild]::Subtract($([System.DateTime]::UtcNow.Year), $(_VersionBaseYear)))</_VersionYears>
+    <_VersionDayOfYear>$([System.DateTime]::UtcNow.DayOfYear)</_VersionDayOfYear>
+    <_VersionMinuteOfDay>$([System.Convert]::ToInt32($([System.Math]::Floor($([System.DateTime]::UtcNow.TimeOfDay.TotalMinutes)))))</_VersionMinuteOfDay>
+    <BuildVersion>1.$(_VersionYears).$(_VersionDayOfYear).$(_VersionMinuteOfDay)</BuildVersion>
+    <Version>$(BuildVersion)</Version>
+    <AssemblyVersion>$(BuildVersion)</AssemblyVersion>
+    <FileVersion>$(BuildVersion)</FileVersion>
+  </PropertyGroup>
+
+  <!-- NuGet package properties -->
+  <PropertyGroup>
+    <PackageId>CodeBrix.Swarm.Queen.MitLicenseForever</PackageId>
+    <Product>CodeBrix.Swarm.Queen</Product>
+    <Title>CodeBrix.Swarm.Queen</Title>
+    <Authors>Jeremy Ellis</Authors>
+    <Description>The coordinator of a swarm of worker processes spread across many hosts. The library owns its own web host, so a desktop application can be the coordinator: it opens two authenticated, one-way message hubs - one for the Hives that manage each host, one for the Workers that do the work - mints the access tokens, which are different for each of the two roles, sends application-defined messages to everything connected to either hub, reports how many of each are connected, and tells them when the work is over. Pair it with CodeBrix.Swarm.Hive and CodeBrix.Swarm.Worker, and install all three at the same version.</Description>
+    <Copyright>Copyright (c) 2026 Jeremy Ellis and contributors</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ellisnet/CodeBrix.Swarm</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ellisnet/CodeBrix.Swarm</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageIcon>icon-codebrix-128.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <IsPackable>true</IsPackable>
+    <PackageTags>swarm;coordinator;worker-processes;messaging;signalr;distributed;authentication;CodeBrix</PackageTags>
+  </PropertyGroup>
+
+  <!--
+    The four content files every package in the family carries, plus this package's own consumer
+    documentation. THE QUEEN'S AGENT-README.txt IS THE ONE AT THE REPOSITORY ROOT - the family's
+    audit and the document-collection script both look for a repository's first AGENT-README there,
+    and the Hive's and the Worker's live in their own project folders instead.
+  -->
+  <ItemGroup>
+    <None Include="..\..\icon-codebrix-128.png" Pack="true" PackagePath="" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" />
+    <None Include="..\..\AGENT-README.txt" Pack="true" PackagePath="" />
+    <None Include="..\..\THIRD-PARTY-NOTICES.txt" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <!--
+    The ASP.NET Core shared framework. This library builds and runs the web host that carries the two
+    hubs, so it needs the whole framework rather than a package; a consuming application gets the
+    framework reference through this package's .nuspec and needs the ASP.NET Core runtime installed.
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!--
+    The SignalR client. The shared project below carries the hub-client connection logic and is
+    referenced with PrivateAssets="all", so its own PackageReference does NOT reach this package's
+    .nuspec - this package has to declare the same one itself, or an application that installs it
+    would be handed a CodeBrix.Swarm.Core.dll whose dependencies are missing.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.12" />
+  </ItemGroup>
+
+  <!--
+    THE SHARED PROJECT, WHICH TRAVELS INSIDE THIS PACKAGE RATHER THAN BESIDE IT.
+
+    CodeBrix.Swarm.Core holds the contract all three libraries speak - the message envelope, the hub
+    paths and client method names, the roles, the built-in message kinds, the Worker configuration
+    model, the exit codes and the hub-client connection logic. The three libraries must never depend
+    on each other, in any direction and at either level, so the shared code cannot live in one of
+    them; and there is no fourth NuGet package, so it cannot be a dependency either.
+    PrivateAssets="all" keeps it out of the generated .nuspec, and the target below puts its DLL into
+    this package's own lib/net10.0/ folder beside this assembly. The other two packages carry their
+    own identical copy, and an application that installs them at the same version ends up with
+    exactly one of them.
+
+    The family versions every package to the minute it was built and publishes the three together, so
+    the copies match. See MAINTAINER-README.txt.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\CodeBrix.Swarm.Core\CodeBrix.Swarm.Core.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeCoreInPackage</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+
+  <!--
+    The shared assembly goes into lib/net10.0/ beside this one, and its XML documentation goes with
+    it: at the point this target runs, a project reference contributes only its assembly to
+    ReferenceCopyLocalPaths, so the documentation file is named from the assembly's own path.
+  -->
+  <Target Name="IncludeCoreInPackage" DependsOnTargets="ResolveReferences">
+    <ItemGroup>
+      <_SwarmSharedAssembly Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
+      <_SwarmSharedXmlDoc Include="@(_SwarmSharedAssembly->'%(RootDir)%(Directory)%(Filename).xml')" />
+      <BuildOutputInPackage Include="@(_SwarmSharedAssembly)" />
+      <BuildOutputInPackage Include="@(_SwarmSharedXmlDoc)" Condition="Exists('%(_SwarmSharedXmlDoc.Identity)')" />
+    </ItemGroup>
+  </Target>
+
+</Project>

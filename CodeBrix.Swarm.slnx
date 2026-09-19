@@ -1,0 +1,30 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="AGENT-README.txt" />
+    <File Path="EXTRAS-README.txt" />
+    <File Path="global.json" />
+    <File Path="icon-codebrix-128.png" />
+    <File Path="LICENSE" />
+    <File Path="MAINTAINER-README.txt" />
+    <File Path="README-INDEX.txt" />
+    <File Path="README.md" />
+    <File Path="THIRD-PARTY-NOTICES.txt" />
+  </Folder>
+  <Folder Name="/Samples/">
+    <Project Path="samples/SwarmSample.Hive/SwarmSample.Hive.csproj" />
+    <Project Path="samples/SwarmSample.Queen/SwarmSample.Queen.csproj" />
+    <Project Path="samples/SwarmSample.Worker/SwarmSample.Worker.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/CodeBrix.Swarm.Core.Tests/CodeBrix.Swarm.Core.Tests.csproj" />
+    <Project Path="tests/CodeBrix.Swarm.EndToEnd.Tests/CodeBrix.Swarm.EndToEnd.Tests.csproj" />
+    <Project Path="tests/CodeBrix.Swarm.Hive.Tests/CodeBrix.Swarm.Hive.Tests.csproj" />
+    <Project Path="tests/CodeBrix.Swarm.Queen.Tests/CodeBrix.Swarm.Queen.Tests.csproj" />
+    <Project Path="tests/CodeBrix.Swarm.Worker.Tests/CodeBrix.Swarm.Worker.Tests.csproj" />
+  </Folder>
+  <Project Path="src/CodeBrix.Swarm.Core/CodeBrix.Swarm.Core.csproj" />
+  <Project Path="src/CodeBrix.Swarm.Hive/CodeBrix.Swarm.Hive.csproj" />
+  <Project Path="src/CodeBrix.Swarm.Queen/CodeBrix.Swarm.Queen.csproj" />
+  <Project Path="src/CodeBrix.Swarm.Worker/CodeBrix.Swarm.Worker.csproj" />
+</Solution>

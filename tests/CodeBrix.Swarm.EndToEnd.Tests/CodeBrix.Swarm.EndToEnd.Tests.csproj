@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CodeBrix.Swarm.EndToEnd.Tests</AssemblyName>
+    <RootNamespace>CodeBrix.Swarm.EndToEnd.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <PackageReference Include="SilverAssertions.ApacheLicenseForever" Version="1.0.248.1071" />
+  </ItemGroup>
+
+  <!--
+    The shared project is referenced directly rather than through the library. The libraries
+    reference it with PrivateAssets="all" so that it stays out of their packages, and that also
+    stops it reaching anything that references them.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeBrix.Swarm.Core\CodeBrix.Swarm.Core.csproj" />
+    <ProjectReference Include="..\..\src\CodeBrix.Swarm.Queen\CodeBrix.Swarm.Queen.csproj" />
+    <ProjectReference Include="..\..\src\CodeBrix.Swarm.Hive\CodeBrix.Swarm.Hive.csproj" />
+    <ProjectReference Include="..\..\src\CodeBrix.Swarm.Worker\CodeBrix.Swarm.Worker.csproj" />
+  </ItemGroup>
+
+  <!--
+    The sample Worker executable, referenced so that it is always built before this suite runs -
+    the scenarios start the real thing rather than a stand-in. ReferenceOutputAssembly is false
+    because nothing here compiles against it.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\samples\SwarmSample.Worker\SwarmSample.Worker.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!--
+    WHERE THAT EXECUTABLE IS. Because it is referenced without its assembly, nothing copies it beside
+    this suite, and the scenarios have to start it where it was built. The path is worked out here,
+    where MSBuild already knows the configuration and the framework, and written into this assembly
+    as a piece of metadata rather than guessed at from the test's own location at run time.
+  -->
+  <PropertyGroup>
+    <_SampleWorkerExecutable>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../samples/SwarmSample.Worker/bin/$(Configuration)/$(TargetFramework)/SwarmSample.Worker'))</_SampleWorkerExecutable>
+    <_SampleWorkerExecutable Condition="'$(OS)' == 'Windows_NT'">$(_SampleWorkerExecutable).exe</_SampleWorkerExecutable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SwarmSampleWorkerExecutable</_Parameter1>
+      <_Parameter2>$(_SampleWorkerExecutable)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <!--
+    xunit.runner.json turns off parallel test collections: this suite starts real hosts, real
+    connections and real processes, which are easier to reason about one at a time. It only takes
+    effect beside the test assembly, so it is copied explicitly.
+  -->
+  <ItemGroup>
+    <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>SwarmSample.Queen</AssemblyName>
+    <RootNamespace>SwarmSample.Queen</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    The shared project is referenced directly rather than through the library. The three libraries
+    reference it with PrivateAssets="all" so that it stays out of their packages, and that also stops
+    it reaching anything that references them by project. An application that installs a package gets
+    it anyway - it travels inside the package, under lib - so referencing it here is what makes this
+    sample see the same surface a consumer does.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeBrix.Swarm.Core\CodeBrix.Swarm.Core.csproj" />
+    <ProjectReference Include="..\..\src\CodeBrix.Swarm.Queen\CodeBrix.Swarm.Queen.csproj" />
+  </ItemGroup>
+
+</Project>

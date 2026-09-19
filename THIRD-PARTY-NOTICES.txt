@@ -1,0 +1,36 @@
+THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
+
+CodeBrix.Swarm is a set of three .NET libraries for running a swarm of worker
+processes across many hosts under one coordinator: CodeBrix.Swarm.Queen,
+CodeBrix.Swarm.Hive and CodeBrix.Swarm.Worker, together with the shared
+CodeBrix.Swarm.Core project whose assembly travels inside all three packages.
+CodeBrix.Swarm does not incorporate any third-party source code into its own
+assemblies. Every .cs file in this repository was written for the CodeBrix
+project.
+
+CodeBrix.Swarm.Hive measures the memory and processor load of the host it runs
+on by declaring and calling entry points that the host operating system already
+publishes - on Debian-based Linux by reading the files the kernel publishes for
+that purpose, on Windows through kernel32, and on macOS through libSystem.
+Those declarations were written from each operating system's own published
+interface descriptions. An interface description is not source code that has
+been incorporated, no library is built, bundled or downloaded, and nothing from
+any operating system vendor is shipped in these packages; the declarations are
+listed here only so that the audit trail is complete.
+
+The NuGet packages this project depends on are not listed here. They are
+resolved by the consuming project and ship with their own licences and notices;
+none of their source is copied into this repository.
+
+Jeremy Ellis and contributors license the CodeBrix.Swarm project
+to you under the terms set forth in the LICENSE file, which is located at
+the root of this repository.
+
+If you have any questions about any third-party code or services referenced
+here, or if you believe that any third-party code has been included in
+CodeBrix.Swarm in error, please open a new issue at:
+https://github.com/ellisnet/CodeBrix.Swarm/issues
+
+================================================================================
+
+END OF THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
