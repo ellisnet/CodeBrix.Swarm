@@ -179,7 +179,10 @@ constructor.
 
     Task StopAsync(CancellationToken ct)
         Stops listening and closes every connection. Sending afterwards throws
-        ObjectDisposedException. Calling it twice is harmless.
+        ObjectDisposedException. Calling it twice is harmless. It is NOT a way
+        to end the work: Hives keep going until their own retry window runs
+        out, and may start Workers in the meantime - see "STOPPING THE
+        COORDINATOR INSTEAD OF ENDING THE WORK" under COMMON PITFALLS.
 
     ValueTask DisposeAsync()
         Stops if it has not been stopped, then disposes the host. Never throws
@@ -568,6 +571,36 @@ COMMON PITFALLS TO AVOID
   for everything else.
 
 * SENDING AFTER StopAsync. It throws ObjectDisposedException.
+
+* STOPPING THE COORDINATOR INSTEAD OF ENDING THE WORK. StopAsync on its own
+  tells nobody the work is over. Every Hive and Worker treats the lost
+  connection as an interruption that may pass, and keeps retrying for its
+  own unreachable window (60 seconds by default) before it gives up, ends
+  its Workers and exits with code 69. During that window, expect the
+  following. All of it is normal, and all of it ends when the Hive's window
+  runs out:
+    - Workers that were already running carry on with their work until
+      their own window runs out, or the Hive ends them as it gives up.
+    - A Worker that runs out of its window exits with code 69, which frees
+      a slot, and the HIVE MAY START A REPLACEMENT. It does not start one
+      while it knows it is disconnected. But when the coordinator shuts
+      down, the connections close slightly before the listener stops, so
+      the Hive's first reconnect can briefly succeed and it can start
+      Workers then. So the number of Worker processes started after
+      StopAsync is not fixed; it depends on timing and on how busy the host
+      is.
+    - A replacement Worker connects BEFORE it runs any work. If the
+      coordinator is gone, it retries for its window and exits with code 69
+      without running the application's work at all.
+    - If a replacement's first connection does land while the coordinator
+      is still shutting down, it DOES start its work. Once the connection
+      drops, it can keep working for up to its window - about a minute by
+      default - for a coordinator that is already gone.
+  FIX: to end a swarm deliberately, send SendTerminateAllWorkersToHivesAsync
+  first. Each Hive then ends its Workers in an orderly way and stops
+  starting new ones for good. Only after that, StopAsync. Make the work
+  safe to be cut off, or to finish after the swarm is over, because a
+  coordinator that crashes or loses the network gets the behaviour above.
 
 * FORGETTING THE ASP.NET CORE RUNTIME. This package needs the shared
   framework; a machine with only the base .NET runtime fails to start the
